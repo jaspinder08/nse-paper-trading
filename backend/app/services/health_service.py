@@ -21,7 +21,7 @@ class HealthService(BaseService):
             db_status = "connected"
         except Exception as e:
             logger.error("Database health check failed: %s", str(e))
-            db_status = f"unhealthy: {str(e)}"
+            db_status = "unhealthy"
 
         overall_status = "healthy" if db_status == "connected" else "degraded"
 

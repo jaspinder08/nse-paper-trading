@@ -1,8 +1,7 @@
-# Environment files (CRITICAL: Never commit secrets)
+# Environment and secrets
 .env
-.env.local
-.env.*.local
-*.env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -51,7 +50,13 @@ frontend/windows/flutter/ephemeral/
 
 # Logs & Databases
 *.log
+logs/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
 *.sqlite3
+data/
 
 # OS & Editor
 .DS_Store

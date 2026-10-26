@@ -7,6 +7,10 @@ from backend.app.core.logging import logger
 class ConnectionManager:
     """Manages active WebSocket connections and channel subscriptions."""
 
+    # Local single-user Phase 1 has no identity provider. Authentication must be
+    # introduced before binding the service beyond localhost.
+    max_subscriptions_per_connection = 32
+
     def __init__(self) -> None:
         self.active_connections: Set[WebSocket] = set()
         self.channel_subscribers: Dict[str, Set[WebSocket]] = {}
@@ -27,6 +31,11 @@ class ConnectionManager:
 
     def subscribe(self, websocket: WebSocket, channel: str) -> None:
         """Subscribes a client to a specific topic channel."""
+        if len(channel) > 64:
+            raise ValueError("WebSocket channel name is too long")
+        subscribed = sum(websocket in subscribers for subscribers in self.channel_subscribers.values())
+        if subscribed >= self.max_subscriptions_per_connection:
+            raise ValueError("WebSocket subscription limit reached")
         if channel not in self.channel_subscribers:
             self.channel_subscribers[channel] = set()
         self.channel_subscribers[channel].add(websocket)

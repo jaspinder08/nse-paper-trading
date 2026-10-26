@@ -1,4 +1,3 @@
-import os
 from typing import AsyncGenerator
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
@@ -9,15 +8,12 @@ from sqlalchemy.ext.asyncio import (
 )
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
+from shared.runtime_config import sqlite_path_from_url
 
 
 def ensure_sqlite_dir(url: str) -> None:
-    """Ensure parent directory exists for SQLite database files."""
-    if "sqlite" in url:
-        parts = url.split(":///")
-        if len(parts) > 1 and parts[-1] and parts[-1] != ":memory:":
-            db_file_path = os.path.abspath(parts[-1])
-            os.makedirs(os.path.dirname(db_file_path), exist_ok=True)
+    """Create only the validated parent directory for the canonical local DB."""
+    sqlite_path_from_url(url).parent.mkdir(parents=True, exist_ok=True)
 
 
 # Ensure data directory exists before establishing connection

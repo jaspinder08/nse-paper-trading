@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import DateTime, Float, ForeignKey, Integer
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.app.database.base import Base, TimestampMixin
 
@@ -17,9 +17,9 @@ class PortfolioSnapshot(Base, TimestampMixin):
         index=True,
     )
     snapshot_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-    total_capital: Mapped[float] = mapped_column(Float, nullable=False)
-    available_margin: Mapped[float] = mapped_column(Float, nullable=False)
-    utilized_margin: Mapped[float] = mapped_column(Float, nullable=False)
-    realized_pnl: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    unrealized_pnl: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    total_capital: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    available_margin: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    utilized_margin: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    realized_pnl: Mapped[float] = mapped_column(Numeric(18, 2), default=0.0, nullable=False)
+    unrealized_pnl: Mapped[float] = mapped_column(Numeric(18, 2), default=0.0, nullable=False)
     open_positions_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

@@ -12,7 +12,7 @@ router = APIRouter()
     response_model=HealthResponse,
     status_code=status.HTTP_200_OK,
     summary="Service Health Check",
-    description="Returns the health status of the API server and PostgreSQL database connection.",
+    description="Returns the health status of the API server and SQLite database connection.",
 )
 async def get_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
     """Check backend operational status and database connection."""

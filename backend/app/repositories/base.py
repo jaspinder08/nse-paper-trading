@@ -2,6 +2,7 @@ from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.database.base import Base
+from backend.app.database.retry import commit_with_retry
 
 ModelType = TypeVar("ModelType", bound=Base)
 
@@ -27,17 +28,17 @@ class BaseRepository(Generic[ModelType]):
     async def create(self, instance: ModelType) -> ModelType:
         """Add and commit a new instance."""
         self.session.add(instance)
-        await self.session.commit()
+        await commit_with_retry(self.session, self.session.commit)
         await self.session.refresh(instance)
         return instance
 
     async def update(self, instance: ModelType) -> ModelType:
         """Update and commit an existing instance."""
-        await self.session.commit()
+        await commit_with_retry(self.session, self.session.commit)
         await self.session.refresh(instance)
         return instance
 
     async def delete(self, instance: ModelType) -> None:
         """Delete an instance."""
         await self.session.delete(instance)
-        await self.session.commit()
+        await commit_with_retry(self.session, self.session.commit)

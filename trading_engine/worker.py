@@ -43,7 +43,7 @@ class TradingWorker:
         logger.info("  NSE INTRADAY TRADING ENGINE WORKER - STARTED")
         logger.info("  EXECUTION MODE: %s (Simulated orders only)", engine_settings.TRADING_MODE)
         logger.info("  INITIAL CAPITAL: ₹%.2f", engine_settings.PAPER_INITIAL_CAPITAL)
-        logger.info("  DATABASE TARGET: %s", engine_settings.DATABASE_ASYNC_URL)
+        logger.info("  DATABASE TARGET: local SQLite database")
         logger.info("==================================================================")
 
         await self.market_data.connect()
@@ -76,7 +76,12 @@ class TradingWorker:
                         summary["realized_pnl"],
                     )
 
-                await asyncio.sleep(engine_settings.ENGINE_SCAN_INTERVAL_SECONDS)
+                try:
+                    # Phase 1 deliberately performs no signal generation or execution.
+                    await asyncio.sleep(engine_settings.ENGINE_SCAN_INTERVAL_SECONDS)
+                except Exception:
+                    logger.exception("Worker cycle failed; continuing after a bounded pause.")
+                    await asyncio.sleep(min(engine_settings.ENGINE_SCAN_INTERVAL_SECONDS, 1.0))
         except asyncio.CancelledError:
             logger.info("Worker loop received cancellation signal.")
         finally:
@@ -84,8 +89,6 @@ class TradingWorker:
 
     async def stop(self) -> None:
         """Perform graceful shutdown."""
-        if not self.is_running:
-            return
         self.is_running = False
         logger.info("Stopping trading worker and releasing resources...")
         await self.market_data.disconnect()

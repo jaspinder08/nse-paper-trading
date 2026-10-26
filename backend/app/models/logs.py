@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.app.database.base import Base, TimestampMixin
 
@@ -34,8 +34,8 @@ class TradeLog(Base, TimestampMixin):
         index=True,
     )  # ENTRY, EXIT, SL_HIT, TARGET_HIT, SQUARE_OFF
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price: Mapped[float] = mapped_column(Float, nullable=False)
-    pnl: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    price: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    pnl: Mapped[Optional[float]] = mapped_column(Numeric(18, 2), nullable=True)
     is_paper: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     log_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

@@ -1,7 +1,7 @@
-import os
-from typing import List, Optional, Union
-from pydantic import Field, field_validator
+from typing import List, Literal, Union
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from shared.runtime_config import canonical_sqlite_url, sqlite_path_from_url
 
 
 class Settings(BaseSettings):
@@ -9,7 +9,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
-        case_sensitive=False
+        case_sensitive=False,
+        validate_default=True,
     )
 
     # General
@@ -22,28 +23,21 @@ class Settings(BaseSettings):
     # Server
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
-    ALLOWED_ORIGINS: Union[List[str], str] = ["*"]
+    ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     # Database Configuration (Default: SQLite for local single-user paper trading)
     # PostgreSQL is reserved for future migration
     DATABASE_ASYNC_URL: str = Field(
-        default="sqlite+aiosqlite:///./data/nse_paper_trading.db",
+        default=None,
         description="Async database connection URL"
     )
     DATABASE_SYNC_URL: str = Field(
-        default="sqlite:///./data/nse_paper_trading.db",
+        default=None,
         description="Sync database connection URL for Alembic migrations"
     )
 
-    # Optional PostgreSQL connection parameters (reserved for future migration)
-    POSTGRES_SERVER: Optional[str] = "localhost"
-    POSTGRES_PORT: Optional[int] = 5432
-    POSTGRES_USER: Optional[str] = "postgres"
-    POSTGRES_PASSWORD: Optional[str] = ""
-    POSTGRES_DB: Optional[str] = "nse_paper_trading"
-
     # Trading Engine Constants (STRICT PAPER TRADING ONLY)
-    TRADING_MODE: str = "PAPER"
+    TRADING_MODE: Literal["PAPER"]
     PAPER_INITIAL_CAPITAL: float = 100000.0
     MAX_CAPITAL_PER_DAY: float = 50000.0
     MAX_LOSS_PER_DAY: float = 2000.0
@@ -57,12 +51,30 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, list):
             return v
-        return ["*"]
+        raise ValueError("ALLOWED_ORIGINS must be a comma-separated list or JSON list")
+
+    @field_validator("DATABASE_ASYNC_URL", mode="before")
+    @classmethod
+    def canonical_async_url(cls, value: str | None) -> str:
+        return canonical_sqlite_url(value, "async")
+
+    @field_validator("DATABASE_SYNC_URL", mode="before")
+    @classmethod
+    def canonical_sync_url(cls, value: str | None) -> str:
+        return canonical_sqlite_url(value, "sync")
+
+    @model_validator(mode="after")
+    def validate_database_pair(self) -> "Settings":
+        async_path = sqlite_path_from_url(self.DATABASE_ASYNC_URL)
+        sync_path = sqlite_path_from_url(self.DATABASE_SYNC_URL)
+        if async_path != sync_path:
+            raise ValueError("DATABASE_ASYNC_URL and DATABASE_SYNC_URL must target the same file")
+        return self
 
     @property
     def is_paper_trading_only(self) -> bool:
-        """Safety invariant: Paper trading must always be True."""
-        return True
+        """True only when validated configuration is in the sole supported mode."""
+        return self.TRADING_MODE == "PAPER"
 
 
 settings = Settings()

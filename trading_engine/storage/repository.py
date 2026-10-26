@@ -1,9 +1,9 @@
-import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from trading_engine.config.settings import engine_settings
+from shared.runtime_config import sqlite_path_from_url
 
 
 class EngineStorageRepository:
@@ -41,10 +41,7 @@ class EngineStorageRepository:
         )
 
     def _ensure_dir(self) -> None:
-        if "sqlite" in self.db_url:
-            parts = self.db_url.split(":///")
-            if len(parts) > 1 and parts[-1] and parts[-1] != ":memory:":
-                os.makedirs(os.path.dirname(os.path.abspath(parts[-1])), exist_ok=True)
+        sqlite_path_from_url(self.db_url).parent.mkdir(parents=True, exist_ok=True)
 
     async def log_system_event(self, level: str, module: str, message: str, details: Optional[str] = None) -> None:
         """Write a system diagnostic event using a short transaction."""

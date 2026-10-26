@@ -13,6 +13,8 @@ if BASE_DIR not in sys.path:
 
 from backend.app.core.config import settings
 from backend.app.database.base import Base
+# Import every mapped class before Alembic captures the metadata.
+import backend.app.models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -24,13 +26,10 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Ensure directory exists for SQLite
+# Ensure the canonical SQLite parent exists.
 sync_url = settings.DATABASE_SYNC_URL
-if "sqlite" in sync_url:
-    parts = sync_url.split(":///")
-    if len(parts) > 1 and parts[-1] and parts[-1] != ":memory:":
-        db_file_path = os.path.abspath(parts[-1])
-        os.makedirs(os.path.dirname(db_file_path), exist_ok=True)
+from shared.runtime_config import sqlite_path_from_url
+sqlite_path_from_url(sync_url).parent.mkdir(parents=True, exist_ok=True)
 
 # Override sqlalchemy.url with environment configuration
 config.set_main_option("sqlalchemy.url", sync_url)
