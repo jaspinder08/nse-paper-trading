@@ -1,18 +1,29 @@
+"""Independent paper trading worker process.
+
+Strict safety invariants:
+- Strictly Paper Trading mode
+- All orders simulated
+- Live broker execution interfaces rejected
+- Rate-limited historical candle ingestion
+- Graceful recovery on restart
+"""
+
 import asyncio
 import logging
 import signal
 import sys
 from typing import Optional
-
 from trading_engine.config.settings import engine_settings
-from trading_engine.market_data.mock_provider import MockMarketDataProvider
-from trading_engine.scanner.orb_scanner import ORBScanner
-from trading_engine.strategy.orb import ORBStrategy
-from trading_engine.risk.validator import RiskValidator
-from trading_engine.risk.sizing import PositionSizer
 from trading_engine.execution.paper_executor import PaperExecutionEngine
+from trading_engine.market_data.calendar import MarketCalendarService
+from trading_engine.market_data.ingestion import HistoricalCandleIngestionService
+from trading_engine.market_data.mock_provider import MockMarketDataProvider
 from trading_engine.portfolio.manager import PortfolioManager
+from trading_engine.risk.sizing import PositionSizer
+from trading_engine.risk.validator import RiskValidator
+from trading_engine.scanner.orb_scanner import ORBScanner
 from trading_engine.storage.repository import EngineStorageRepository
+from trading_engine.strategy.orb import ORBStrategy
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +46,7 @@ class TradingWorker:
         self.execution = PaperExecutionEngine()
         self.portfolio = PortfolioManager(initial_capital=engine_settings.PAPER_INITIAL_CAPITAL)
         self.storage = EngineStorageRepository()
+        self.ingestion_service = HistoricalCandleIngestionService(self.market_data)
 
     async def start(self) -> None:
         """Start the trading worker event loop."""
@@ -48,6 +60,14 @@ class TradingWorker:
 
         await self.market_data.connect()
         logger.info("Market data provider initialized (Mock Provider).")
+
+        # Recover any interrupted jobs from previous worker crash
+        try:
+            recovered_count = await self.storage.recover_interrupted_jobs()
+            if recovered_count > 0:
+                logger.info("Worker recovery: Reset %d interrupted ingestion job(s) to PENDING.", recovered_count)
+        except Exception as exc:
+            logger.warning("Could not execute job recovery: %s", exc)
 
         try:
             await self.storage.log_system_event(
@@ -65,23 +85,36 @@ class TradingWorker:
                 iteration += 1
                 logger.debug("Worker cycle #%d executing scan...", iteration)
 
-                # Periodic heartbeat log
+                # 1. Process pending historical candle ingestion jobs if any
+                try:
+                    job_id = await self.storage.get_next_pending_job_id()
+                    if job_id:
+                        logger.info("Found pending ingestion job #%d; executing...", job_id)
+                        async with self.storage.session_factory() as session:
+                            await self.ingestion_service.execute_job(session, job_id)
+                        logger.info("Completed ingestion job #%d.", job_id)
+                except Exception as job_err:
+                    logger.exception("Ingestion job execution encountered error: %s", job_err)
+
+                # 2. Periodic heartbeat log
                 if iteration % 10 == 0:
                     summary = self.portfolio.get_summary()
+                    market_stat = MarketCalendarService.get_market_status()
                     logger.info(
-                        "Heartbeat cycle #%d | Positions: %d | Available Margin: ₹%.2f | Realized PnL: ₹%.2f",
+                        "Heartbeat cycle #%d | Market Open: %s (%s) | Positions: %d | Realized PnL: ₹%.2f",
                         iteration,
+                        market_stat["is_market_open"],
+                        market_stat["session_type"],
                         summary["open_positions_count"],
-                        summary["available_margin"],
                         summary["realized_pnl"],
                     )
 
                 try:
-                    # Phase 1 deliberately performs no signal generation or execution.
                     await asyncio.sleep(engine_settings.ENGINE_SCAN_INTERVAL_SECONDS)
                 except Exception:
-                    logger.exception("Worker cycle failed; continuing after a bounded pause.")
+                    logger.exception("Worker cycle pause failed; continuing.")
                     await asyncio.sleep(min(engine_settings.ENGINE_SCAN_INTERVAL_SECONDS, 1.0))
+
         except asyncio.CancelledError:
             logger.info("Worker loop received cancellation signal.")
         finally:

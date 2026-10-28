@@ -79,7 +79,7 @@ async def test_unique_candle_constraint(db_session: AsyncSession):
         symbol=unique_symbol,
         name="Tata Consultancy Services",
         exchange="NSE",
-        token="11536",
+        token=f"TOK_{uuid.uuid4().hex[:6]}",
         segment="EQUITY",
         lot_size=1,
         tick_size=0.05,

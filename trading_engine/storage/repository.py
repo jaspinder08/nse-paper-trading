@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from sqlalchemy import event, text
+from sqlalchemy import event, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from backend.app.models.ingestion import DataIngestionJob
+from backend.app.models.logs import SystemLog
 from trading_engine.config.settings import engine_settings
 from shared.runtime_config import sqlite_path_from_url
 
@@ -45,7 +47,6 @@ class EngineStorageRepository:
 
     async def log_system_event(self, level: str, module: str, message: str, details: Optional[str] = None) -> None:
         """Write a system diagnostic event using a short transaction."""
-        from backend.app.models.logs import SystemLog
         async with self.session_factory() as session:
             async with session.begin():
                 log_entry = SystemLog(
@@ -56,6 +57,33 @@ class EngineStorageRepository:
                     logged_at=datetime.now(timezone.utc),
                 )
                 session.add(log_entry)
+
+    async def recover_interrupted_jobs(self) -> int:
+        """Recover any jobs left in 'RUNNING' status from previous worker crashes or restarts."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                stmt = (
+                    update(DataIngestionJob)
+                    .where(DataIngestionJob.status == "RUNNING")
+                    .values(
+                        status="PENDING",
+                        error_message="Recovered from worker restart",
+                    )
+                )
+                res = await session.execute(stmt)
+                return res.rowcount or 0
+
+    async def get_next_pending_job_id(self) -> Optional[int]:
+        """Fetch the ID of the next pending ingestion job, if any."""
+        async with self.session_factory() as session:
+            stmt = (
+                select(DataIngestionJob.id)
+                .where(DataIngestionJob.status == "PENDING")
+                .order_by(DataIngestionJob.id.asc())
+                .limit(1)
+            )
+            res = await session.execute(stmt)
+            return res.scalar_one_or_none()
 
     async def dispose(self) -> None:
         await self.engine.dispose()
