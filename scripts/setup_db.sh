@@ -14,12 +14,26 @@ echo "=================================================="
 # Ensure data directory exists
 mkdir -p data
 
-# Run Alembic migrations
-if [ -f ".venv/bin/alembic" ]; then
-    .venv/bin/alembic -c backend/alembic.ini upgrade head
-else
-    alembic -c backend/alembic.ini upgrade head
+# Initialize SQLite tables directly from SQLAlchemy metadata (no Alembic migrations)
+PYTHON_BIN="python3"
+if [ -f ".venv/bin/python" ]; then
+    PYTHON_BIN=".venv/bin/python"
 fi
+
+${PYTHON_BIN} -c "
+import asyncio
+from backend.app.database.session import async_engine
+from backend.app.database.base import Base
+import backend.app.models
+
+async def init():
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await async_engine.dispose()
+    print('  All tables verified/created directly in local SQLite.')
+
+asyncio.run(init())
+"
 
 echo "=================================================="
 echo "  Database migration completed successfully!"

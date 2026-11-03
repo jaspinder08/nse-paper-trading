@@ -14,6 +14,7 @@ from backend.app.schemas.market_data import (
     IngestionJobCreateRequest,
     IngestionJobResponse,
 )
+from backend.app.core.config import settings
 from trading_engine.market_data.ingestion import HistoricalCandleIngestionService
 from trading_engine.market_data.mock_provider import MockMarketDataProvider
 
@@ -23,9 +24,18 @@ router = APIRouter(prefix="/market-data", tags=["Market Data Ingestion"])
 async def _run_background_ingestion(job_id: int) -> None:
     """Execute ingestion job in background task with dedicated session."""
     async with AsyncSessionLocal() as session:
-        # For Phase 2 local development, default to MockMarketDataProvider
-        # Angel One provider can be selected when environment credentials are provided
-        service = HistoricalCandleIngestionService(MockMarketDataProvider())
+        if settings.MARKET_DATA_PROVIDER.lower() == "angel_one" and settings.SMARTAPI_API_KEY:
+            from trading_engine.market_data.angel_one import AngelOneMarketDataProvider
+            provider = AngelOneMarketDataProvider(
+                api_key=settings.SMARTAPI_API_KEY,
+                client_code=settings.SMARTAPI_CLIENT_CODE,
+                password=settings.SMARTAPI_PASSWORD,
+                totp_key=settings.SMARTAPI_TOTP_KEY,
+            )
+        else:
+            provider = MockMarketDataProvider()
+
+        service = HistoricalCandleIngestionService(provider)
         try:
             await service.execute_job(session, job_id)
         except Exception:

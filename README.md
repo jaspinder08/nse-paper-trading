@@ -117,13 +117,12 @@ pip install -r backend/requirements.txt
 cp .env.example .env
 ```
 
-### Step 2: Database Setup & Migrations
-Initialize the SQLite database (`data/nse_paper_trading.db`) and apply all 13 model tables:
+### Step 2: Database Setup (Local SQLite)
+Initialize the SQLite database (`data/nse_paper_trading.db`) and create all tables directly:
 ```bash
 ./scripts/setup_db.sh
-# or directly:
-alembic -c backend/alembic.ini upgrade head
 ```
+*(Tables are also verified and auto-created automatically when the FastAPI backend starts).*
 
 ---
 

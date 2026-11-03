@@ -23,6 +23,10 @@ class TradingEngineSettings(BaseSettings):
 
     # Market Data
     MARKET_DATA_PROVIDER: str = "mock"
+    SMARTAPI_API_KEY: str = ""
+    SMARTAPI_CLIENT_CODE: str = ""
+    SMARTAPI_PASSWORD: str = ""
+    SMARTAPI_TOTP_KEY: str = ""
 
     # Database URLs (Default: SQLite, PostgreSQL reserved for future)
     DATABASE_ASYNC_URL: str | None = None

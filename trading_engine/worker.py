@@ -37,10 +37,18 @@ class TradingWorker:
     """Independent paper trading worker process."""
 
     def __init__(self) -> None:
-        self.is_running: bool = False
-        self.market_data = MockMarketDataProvider()
-        self.scanner = ORBScanner()
+        if engine_settings.MARKET_DATA_PROVIDER.lower() == "angel_one" and engine_settings.SMARTAPI_API_KEY:
+            from trading_engine.market_data.angel_one import AngelOneMarketDataProvider
+            self.market_data = AngelOneMarketDataProvider(
+                api_key=engine_settings.SMARTAPI_API_KEY,
+                client_code=engine_settings.SMARTAPI_CLIENT_CODE,
+                password=engine_settings.SMARTAPI_PASSWORD,
+                totp_key=engine_settings.SMARTAPI_TOTP_KEY,
+            )
+        else:
+            self.market_data = MockMarketDataProvider()
         self.strategy = ORBStrategy()
+        self.scanner = ORBScanner(strategy=self.strategy, market_data_provider=self.market_data)
         self.risk_validator = RiskValidator()
         self.position_sizer = PositionSizer()
         self.execution = PaperExecutionEngine()

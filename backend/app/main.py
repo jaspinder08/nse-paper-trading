@@ -10,6 +10,8 @@ from backend.app.core.exceptions import (
     generic_exception_handler,
 )
 from backend.app.core.logging import logger, setup_logging
+from backend.app.database.base import Base
+import backend.app.models  # noqa: F401
 from backend.app.database.session import async_engine
 
 
@@ -19,6 +21,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
     logger.info("Initializing %s in %s mode...", settings.PROJECT_NAME, settings.ENVIRONMENT)
     logger.info("PAPER TRADING SAFEGUARD: Live broker order execution is permanently disabled.")
+    
+    # Auto-create all tables locally without needing Alembic migrations
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database tables verified/created locally.")
+
     yield
     logger.info("Shutting down %s...", settings.PROJECT_NAME)
     await async_engine.dispose()

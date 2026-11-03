@@ -67,7 +67,7 @@ def run_migrations_online() -> None:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA busy_timeout=10000")
-            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA foreign_keys=OFF")
             cursor.close()
 
     with connectable.connect() as connection:

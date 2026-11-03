@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     MAX_OPEN_POSITIONS: int = 3
     ENGINE_SCAN_INTERVAL_SECONDS: float = 1.0
 
+    # Market Data Provider ("mock" or "angel_one")
+    MARKET_DATA_PROVIDER: str = "mock"
+    SMARTAPI_API_KEY: str = ""
+    SMARTAPI_CLIENT_CODE: str = ""
+    SMARTAPI_PASSWORD: str = ""
+    SMARTAPI_TOTP_KEY: str = ""
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
