@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     MAX_OPEN_POSITIONS: int = 3
     ENGINE_SCAN_INTERVAL_SECONDS: float = 1.0
 
+    # Risk Management & Sizing Parameters (PDF Section 9 & 20)
+    CASH_RESERVE_PCT: float = 0.10
+    MAX_POSITION_PCT: float = 0.25
+    MAX_RISK_PER_TRADE_INR: float = 25.0
+    MAX_DAILY_LOSS_INR: float = 75.0
+    MAX_TRADES_PER_DAY: int = 3
+    MAX_EVENTS_PER_DAY: int = 6
+    MIN_REWARD_RISK: float = 1.5
+
     # Market Data Provider ("mock" or "angel_one")
     MARKET_DATA_PROVIDER: str = "mock"
     SMARTAPI_API_KEY: str = ""

@@ -28,6 +28,36 @@ class BacktestRun(Base, TimestampMixin):
     parameters_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="PENDING", nullable=False)  # PENDING, RUNNING, COMPLETED, FAILED
 
+    @property
+    def profit_factor(self) -> Optional[float]:
+        if not self.parameters_json:
+            return None
+        import json
+        try:
+            data = json.loads(self.parameters_json)
+            val = data.get("profit_factor")
+            return float(val) if val is not None else None
+        except Exception:
+            return None
+
+    @property
+    def max_drawdown_pct(self) -> Optional[float]:
+        if self.max_drawdown is not None:
+            return float(self.max_drawdown)
+        if not self.parameters_json:
+            return None
+        import json
+        try:
+            data = json.loads(self.parameters_json)
+            val = data.get("max_drawdown_pct")
+            return float(val) if val is not None else None
+        except Exception:
+            return None
+
+    @property
+    def net_pnl(self) -> float:
+        return round(float(self.final_capital) - float(self.initial_capital), 2)
+
 
 class BacktestTrade(Base, TimestampMixin):
     """Individual simulated trade executed during a backtest run."""

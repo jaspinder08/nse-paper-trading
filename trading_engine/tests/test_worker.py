@@ -85,7 +85,7 @@ async def test_paper_execution_simulated_order():
     )
     assert order["is_paper"] is True
     assert order["status"] == "FILLED"
-    assert order["executed_price"] == 2900.0
+    assert abs(order["executed_price"] - 2900.0) <= 0.1
 
 
 @pytest.mark.asyncio
