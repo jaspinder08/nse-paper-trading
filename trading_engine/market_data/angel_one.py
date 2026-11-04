@@ -310,6 +310,31 @@ class AngelOneMarketDataProvider(AbstractMarketDataProvider):
 
         raise RuntimeError(f"Failed to fetch historical candles after {max_retries} attempts: {last_error}")
 
+    async def fetch_candles(
+        self,
+        symbol: str,
+        timeframe: str = "5m",
+        from_dt: Optional[datetime] = None,
+        to_dt: Optional[datetime] = None,
+    ) -> List[HistoricalCandle]:
+        """Fetch candles by symbol convenience method."""
+        from trading_engine.universe.nifty50 import HISTORICAL_NIFTY50_DATA
+        token = next((d["token"] for d in HISTORICAL_NIFTY50_DATA if d["symbol"] == symbol.upper()), None)
+        if not token:
+            logger.warning("No token mapping found for symbol %s in Angel One provider.", symbol)
+            return []
+
+        now = datetime.now(timezone.utc)
+        start = from_dt or datetime(now.year, now.month, now.day, 3, 45, tzinfo=timezone.utc)
+        end = to_dt or now
+        return await self.fetch_historical_candles(
+            exchange="NSE",
+            token=token,
+            interval=timeframe,
+            start=start,
+            end=end,
+        )
+
     async def subscribe_ticks(self, symbols: List[str], callback: Callable[[Dict[str, Any]], None]) -> None:
         raise NotImplementedError("Live WebSocket streaming is deferred to Phase 3.")
 

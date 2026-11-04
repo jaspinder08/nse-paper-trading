@@ -31,6 +31,13 @@ _scanner = ORBScanner(strategy=ORBStrategy())
     summary="Scan NIFTY 50 Universe",
     description="Run or fetch current Opening Range Breakout (ORB) scan across active Nifty 50 equities.",
 )
+@router.get(
+    "/candidates",
+    response_model=ApiResponse[ScannerSummaryResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Scan NIFTY 50 Universe Candidates (Alias)",
+    description="Alias endpoint for fetching current Opening Range Breakout (ORB) scan candidates.",
+)
 async def get_scanner_results() -> ApiResponse[ScannerSummaryResponse]:
     """Execute intraday ORB scan across Nifty 50 constituents."""
     current_date = now_ist().date()

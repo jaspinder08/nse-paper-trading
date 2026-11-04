@@ -25,6 +25,13 @@ router = APIRouter(tags=["Portfolio & Positions"])
     summary="List Paper Positions",
     description="Retrieve paginated simulated positions filtered by status (OPEN, CLOSED).",
 )
+@router.get(
+    "/portfolio/positions",
+    response_model=ApiResponse[PaginatedResponse[PositionResponse]],
+    status_code=status.HTTP_200_OK,
+    summary="List Paper Positions (Alias)",
+    description="Alias for retrieving paginated simulated positions.",
+)
 async def list_positions(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),

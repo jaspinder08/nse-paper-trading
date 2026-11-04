@@ -21,6 +21,13 @@ router = APIRouter(tags=["Trade Journal & System Logs"])
     summary="List Trade Journal Entries",
     description="Retrieve chronological trade execution audit logs with prices, actions, and P&L.",
 )
+@router.get(
+    "/journal/trades",
+    response_model=ApiResponse[PaginatedResponse[TradeLogResponse]],
+    status_code=status.HTTP_200_OK,
+    summary="List Trade Journal Entries (Alias)",
+    description="Alias for retrieving chronological trade execution audit logs.",
+)
 async def list_trade_journal(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),

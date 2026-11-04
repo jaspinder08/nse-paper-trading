@@ -51,3 +51,14 @@ class AbstractMarketDataProvider(ABC):
     async def fetch_historical_candles(self, *, exchange: str, token: str, interval: str, start: datetime, end: datetime) -> List[HistoricalCandle]:
         """Return provider candles for a bounded interval."""
         pass
+
+    @abstractmethod
+    async def fetch_candles(
+        self,
+        symbol: str,
+        timeframe: str = "5m",
+        from_dt: Optional[datetime] = None,
+        to_dt: Optional[datetime] = None,
+    ) -> List[HistoricalCandle]:
+        """Convenience method to return candles for a symbol over a time window."""
+        pass
